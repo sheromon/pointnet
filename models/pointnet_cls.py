@@ -10,14 +10,14 @@ import tf_util
 from transform_nets import input_transform_net, feature_transform_net
 
 def placeholder_inputs(batch_size, num_point):
-    pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, 3))
-    labels_pl = tf.placeholder(tf.int32, shape=(batch_size))
+    pointclouds_pl = tf.placeholder(tf.float32, shape=(None, num_point, 3))
+    labels_pl = tf.placeholder(tf.int32, shape=(None))
     return pointclouds_pl, labels_pl
 
 
-def get_model(point_cloud, is_training, bn_decay=None):
+def get_model(point_cloud, num_classes, is_training, bn_decay=None):
     """ Classification PointNet, input is BxNx3, output Bx40 """
-    batch_size = point_cloud.get_shape()[0].value
+    # batch_size = point_cloud.get_shape()[0].value
     num_point = point_cloud.get_shape()[1].value
     end_points = {}
 
@@ -58,7 +58,7 @@ def get_model(point_cloud, is_training, bn_decay=None):
     net = tf_util.max_pool2d(net, [num_point,1],
                              padding='VALID', scope='maxpool')
 
-    net = tf.reshape(net, [batch_size, -1])
+    net = tf.reshape(net, [-1, 1024])
     net = tf_util.fully_connected(net, 512, bn=True, is_training=is_training,
                                   scope='fc1', bn_decay=bn_decay)
     net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
@@ -67,7 +67,7 @@ def get_model(point_cloud, is_training, bn_decay=None):
                                   scope='fc2', bn_decay=bn_decay)
     net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
                           scope='dp2')
-    net = tf_util.fully_connected(net, 40, activation_fn=None, scope='fc3')
+    net = tf_util.fully_connected(net, num_classes, activation_fn=None, scope='fc3')
 
     return net, end_points
 

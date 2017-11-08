@@ -26,6 +26,7 @@ parser.add_argument('--momentum', type=float, default=0.9, help='Initial learnin
 parser.add_argument('--optimizer', default='adam', help='adam or momentum [default: adam]')
 parser.add_argument('--decay_step', type=int, default=200000, help='Decay step for lr decay [default: 200000]')
 parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate for lr decay [default: 0.8]')
+parser.add_argument('--num_classes', type=int, default=40, help='Number of classes [default: 40]')
 FLAGS = parser.parse_args()
 
 
@@ -49,7 +50,7 @@ LOG_FOUT = open(os.path.join(LOG_DIR, 'log_train.txt'), 'w')
 LOG_FOUT.write(str(FLAGS)+'\n')
 
 MAX_NUM_POINT = 2048
-NUM_CLASSES = 40
+NUM_CLASSES = FLAGS.num_classes
 
 BN_INIT_DECAY = 0.5
 BN_DECAY_DECAY_RATE = 0.5
@@ -104,7 +105,7 @@ def train():
             tf.summary.scalar('bn_decay', bn_decay)
 
             # Get model and loss 
-            pred, end_points = MODEL.get_model(pointclouds_pl, is_training_pl, bn_decay=bn_decay)
+            pred, end_points = MODEL.get_model(pointclouds_pl, NUM_CLASSES, is_training_pl, bn_decay=bn_decay)
             loss = MODEL.get_loss(pred, labels_pl, end_points)
             tf.summary.scalar('loss', loss)
 
@@ -252,7 +253,10 @@ def eval_one_epoch(sess, ops, test_writer):
             
     log_string('eval mean loss: %f' % (loss_sum / float(total_seen)))
     log_string('eval accuracy: %f'% (total_correct / float(total_seen)))
-    log_string('eval avg class acc: %f' % (np.mean(np.array(total_correct_class)/np.array(total_seen_class,dtype=np.float))))
+    total_correct_class = np.array(total_correct_class)
+    total_seen_class = np.array(total_seen_class, dtype=np.float)
+    ok_inds = total_seen_class != 0
+    log_string('eval avg class acc: %f' % (np.mean(total_correct_class[ok_inds]/total_seen_class[ok_inds])))
          
 
 
